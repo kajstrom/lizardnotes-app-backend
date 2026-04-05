@@ -1,0 +1,47 @@
+{
+  "name": "lizardnotes-app-backend",
+  "version": "1.0.0",
+  "description": "LizardNotes backend Lambda functions",
+  "type": "commonjs",
+  "scripts": {
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "build": "npm run typecheck && node esbuild.config.js",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3",
+    "@aws-sdk/client-s3": "^3",
+    "@aws-sdk/lib-dynamodb": "^3",
+    "@aws-sdk/s3-request-presigner": "^3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8",
+    "@types/jest": "^29",
+    "@types/node": "^22",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "aws-sdk-client-mock": "^4",
+    "aws-sdk-client-mock-jest": "^4",
+    "esbuild": "^0.25",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10",
+    "husky": "^9",
+    "jest": "^29",
+    "jiti": "^2",
+    "lint-staged": "^15",
+    "prettier": "^3",
+    "ts-jest": "^29",
+    "ts-node": "^10.9.2",
+    "typescript": "^5",
+    "typescript-eslint": "^8"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
