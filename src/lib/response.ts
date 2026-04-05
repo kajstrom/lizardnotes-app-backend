@@ -17,7 +17,7 @@ export function created(body: unknown): APIGatewayProxyResultV2 {
 }
 
 export function noContent(): APIGatewayProxyResultV2 {
-  return { statusCode: 204 };
+  return json(204, {});
 }
 
 export function badRequest(message: string): APIGatewayProxyResultV2 {
