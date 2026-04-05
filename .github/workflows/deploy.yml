@@ -1,0 +1,99 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Read SSM parameters
+        run: |
+          PARAMS=$(aws ssm get-parameters-by-path \
+            --path /lizardnotes \
+            --recursive \
+            --query "Parameters[*].{Name:Name,Value:Value}" \
+            --output json)
+
+          echo "DEPLOYMENT_BUCKET=$(echo "$PARAMS" | jq -r '.[] | select(.Name == "/lizardnotes/deployment/bucketName") | .Value')" >> $GITHUB_ENV
+          echo "FOLDERS_FUNCTION_ARN=$(echo "$PARAMS" | jq -r '.[] | select(.Name == "/lizardnotes/lambda/foldersFunctionArn") | .Value')" >> $GITHUB_ENV
+          echo "NOTES_FUNCTION_ARN=$(echo "$PARAMS" | jq -r '.[] | select(.Name == "/lizardnotes/lambda/notesFunctionArn") | .Value')" >> $GITHUB_ENV
+          echo "ATTACH_FUNCTION_ARN=$(echo "$PARAMS" | jq -r '.[] | select(.Name == "/lizardnotes/lambda/attachmentsFunctionArn") | .Value')" >> $GITHUB_ENV
+          echo "AUTH_FUNCTION_ARN=$(echo "$PARAMS" | jq -r '.[] | select(.Name == "/lizardnotes/lambda/authFunctionArn") | .Value')" >> $GITHUB_ENV
+
+      - name: Validate SSM parameters
+        run: |
+          : "${DEPLOYMENT_BUCKET:?SSM /lizardnotes/deployment/bucketName not found}"
+          : "${FOLDERS_FUNCTION_ARN:?SSM /lizardnotes/lambda/foldersFunctionArn not found}"
+          : "${NOTES_FUNCTION_ARN:?SSM /lizardnotes/lambda/notesFunctionArn not found}"
+          : "${ATTACH_FUNCTION_ARN:?SSM /lizardnotes/lambda/attachmentsFunctionArn not found}"
+          : "${AUTH_FUNCTION_ARN:?SSM /lizardnotes/lambda/authFunctionArn not found}"
+
+      - name: Upload zips to S3
+        run: |
+          aws s3 cp dist/folders/function.zip "s3://${DEPLOYMENT_BUCKET}/functions/folders/function.zip"
+          aws s3 cp dist/notes/function.zip "s3://${DEPLOYMENT_BUCKET}/functions/notes/function.zip"
+          aws s3 cp dist/attachments/function.zip "s3://${DEPLOYMENT_BUCKET}/functions/attachments/function.zip"
+          aws s3 cp dist/auth/function.zip "s3://${DEPLOYMENT_BUCKET}/functions/auth/function.zip"
+
+      - name: Update Lambda function code
+        run: |
+          aws lambda update-function-code \
+            --function-name "${FOLDERS_FUNCTION_ARN}" \
+            --s3-bucket "${DEPLOYMENT_BUCKET}" \
+            --s3-key functions/folders/function.zip
+          aws lambda update-function-code \
+            --function-name "${NOTES_FUNCTION_ARN}" \
+            --s3-bucket "${DEPLOYMENT_BUCKET}" \
+            --s3-key functions/notes/function.zip
+          aws lambda update-function-code \
+            --function-name "${ATTACH_FUNCTION_ARN}" \
+            --s3-bucket "${DEPLOYMENT_BUCKET}" \
+            --s3-key functions/attachments/function.zip
+          aws lambda update-function-code \
+            --function-name "${AUTH_FUNCTION_ARN}" \
+            --s3-bucket "${DEPLOYMENT_BUCKET}" \
+            --s3-key functions/auth/function.zip
+
+      - name: Wait for Lambda updates
+        run: |
+          aws lambda wait function-updated --function-name "${FOLDERS_FUNCTION_ARN}"
+          aws lambda wait function-updated --function-name "${NOTES_FUNCTION_ARN}"
+          aws lambda wait function-updated --function-name "${ATTACH_FUNCTION_ARN}"
+          aws lambda wait function-updated --function-name "${AUTH_FUNCTION_ARN}"

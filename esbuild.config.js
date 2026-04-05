@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const { execSync } = require('child_process');
 
 const functions = ['folders', 'notes', 'attachments', 'auth'];
 
@@ -14,7 +15,13 @@ Promise.all(
       external: [],
     }),
   ),
-).catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+)
+  .then(() => {
+    for (const name of functions) {
+      execSync(`zip -j dist/${name}/function.zip dist/${name}/index.js`, { stdio: 'inherit' });
+    }
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
