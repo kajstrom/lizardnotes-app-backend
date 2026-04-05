@@ -34,6 +34,11 @@ Deployment is automated via GitHub Actions on every push to `master`.
 | Secret | Description |
 |---|---|
 | `AWS_ROLE_ARN` | ARN of the IAM role assumed via OIDC |
+
+**Required GitHub Actions variables:**
+
+| Variable | Description |
+|---|---|
 | `AWS_REGION` | AWS region (e.g. `eu-west-1`) |
 
 **Pipeline steps:**
