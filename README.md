@@ -66,12 +66,15 @@ The role assumed via OIDC needs exactly three grants. Replace the placeholders w
       "Sid": "ReadSSMParameters",
       "Effect": "Allow",
       "Action": "ssm:GetParametersByPath",
-      "Resource": "arn:aws:ssm:<region>:<account-id>:parameter/lizardnotes/*"
+      "Resource": "arn:aws:ssm:<region>:<account-id>:parameter/lizardnotes*"
     },
     {
       "Sid": "UploadLambdaZips",
       "Effect": "Allow",
-      "Action": "s3:PutObject",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
       "Resource": "arn:aws:s3:::<deployment-bucket>/functions/*"
     },
     {
@@ -79,20 +82,19 @@ The role assumed via OIDC needs exactly three grants. Replace the placeholders w
       "Effect": "Allow",
       "Action": [
         "lambda:UpdateFunctionCode",
-        "lambda:GetFunction"
+        "lambda:GetFunctionConfiguration"
       ],
-      "Resource": [
-        "arn:aws:lambda:<region>:<account-id>:function:lizardnotes-folders",
-        "arn:aws:lambda:<region>:<account-id>:function:lizardnotes-notes",
-        "arn:aws:lambda:<region>:<account-id>:function:lizardnotes-attachments",
-        "arn:aws:lambda:<region>:<account-id>:function:lizardnotes-auth"
-      ]
+      "Resource": "arn:aws:lambda:<region>:<account-id>:function:LizardNotesStack-*"
     }
   ]
 }
 ```
 
-`lambda:GetFunction` is required by `aws lambda wait function-updated`, which polls the function's `LastUpdateStatus` until it reaches a terminal state.
+`lambda:GetFunctionConfiguration` is required by `aws lambda wait function-updated`, which polls the function's `LastUpdateStatus` until it reaches a terminal state.
+
+> **SSM resource note:** The resource uses `parameter/lizardnotes*` (no slash before `*`). `GetParametersByPath` is evaluated against the path being queried (`parameter/lizardnotes`), not the individual parameters — so `parameter/lizardnotes/*` would deny the call.
+>
+> **Lambda resource note:** CDK auto-generates function names (`LizardNotesStack-<id>-<hash>`), so the resource uses a prefix wildcard rather than exact ARNs. If you later assign explicit `functionName` values in the CDK stack the resource can be tightened to exact ARNs.
 
 The role's trust policy must restrict assumption to this repository:
 
