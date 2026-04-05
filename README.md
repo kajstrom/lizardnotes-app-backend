@@ -27,7 +27,7 @@ npm run build       # typecheck + bundle + zip (outputs to dist/)
 
 ## Deployment
 
-Deployment is automated via GitHub Actions on every push to `main`.
+Deployment is automated via GitHub Actions on every push to `master`.
 
 **Required GitHub Actions secrets:**
 
@@ -103,13 +103,13 @@ The role's trust policy must restrict assumption to this repository:
       "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
     },
     "StringLike": {
-      "token.actions.githubusercontent.com:sub": "repo:<github-org>/lizardnotes-app-backend:ref:refs/heads/main"
+      "token.actions.githubusercontent.com:sub": "repo:<github-org>/lizardnotes-app-backend:ref:refs/heads/master"
     }
   }
 }
 ```
 
-The `sub` condition locks the role to pushes on `main` in this repository only — it cannot be assumed by other repos, branches, or workflow triggers (e.g. pull requests).
+The `sub` condition locks the role to pushes on `master` in this repository only — it cannot be assumed by other repos, branches, or workflow triggers (e.g. pull requests).
 
 ---
 
