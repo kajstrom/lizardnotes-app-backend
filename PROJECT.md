@@ -221,6 +221,12 @@ Inside the Lambda handler, the authenticated user's Cognito sub (userId) is avai
 event.requestContext.authorizer.jwt.claims.sub
 ```
 
+### API specification
+
+`openapi.yaml` in `lizardnotes-app-backend` is the source of truth for all API contracts (schemas, request/response bodies, security). Validated by Redocly CLI on every push to `master`. The Flutter frontend uses this spec to generate its Dart HTTP client.
+
+Validate locally: `npm run validate:api`
+
 ### API route table
 
 | Method | Path | Lambda |

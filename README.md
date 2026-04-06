@@ -166,3 +166,19 @@ All routes require a Cognito JWT Bearer token.
 | `POST` | `/notes/{noteId}/attachments` | attachments |
 | `DELETE` | `/notes/{noteId}/attachments/{attachmentId}` | attachments |
 | `GET` | `/auth/me` | auth |
+
+---
+
+## API Specification
+
+`openapi.yaml` in the repository root is the source of truth for all API contracts.
+
+**Validate locally:**
+
+```sh
+npm run validate:api
+```
+
+**CI:** The spec is validated on every push to `master` — the pipeline fails if Redocly finds any structural or schema errors.
+
+**Frontend:** The Flutter frontend uses this spec to generate its Dart HTTP client.

@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "build": "npm run typecheck && node esbuild.config.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "validate:api": "npx @redocly/cli lint openapi.yaml"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3",

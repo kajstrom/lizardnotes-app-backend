@@ -1,0 +1,517 @@
+openapi: 3.1.0
+
+info:
+  title: LizardNotes API
+  version: 1.0.0
+  description: Backend API for LizardNotes — a personal Obsidian-style markdown notes app.
+
+# The API URL is environment-specific and is read at deploy time from SSM parameter
+# /lizardnotes/apigateway/apiUrl. Replace the placeholder below with the actual URL
+# from your deployed infra stack before using this spec with external tooling.
+servers:
+  - url: https://your-api-id.execute-api.your-region.amazonaws.com
+    description: API Gateway HTTP API (value from SSM /lizardnotes/apigateway/apiUrl)
+
+security:
+  - CognitoJWT: []
+
+components:
+  securitySchemes:
+    CognitoJWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Folder:
+      type: object
+      required:
+        - folderId
+        - name
+        - parentFolderId
+        - path
+        - createdAt
+        - updatedAt
+        - userId
+      properties:
+        folderId:
+          type: string
+        name:
+          type: string
+        parentFolderId:
+          type:
+            - string
+            - "null"
+        path:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+
+    Note:
+      type: object
+      required:
+        - noteId
+        - folderId
+        - title
+        - content
+        - createdAt
+        - updatedAt
+        - userId
+      properties:
+        noteId:
+          type: string
+        folderId:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+
+    Attachment:
+      type: object
+      required:
+        - attachmentId
+        - noteId
+        - filename
+        - mimeType
+        - size
+        - s3Key
+        - createdAt
+        - userId
+      properties:
+        attachmentId:
+          type: string
+        noteId:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        s3Key:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+
+    AttachmentWithDownloadUrl:
+      allOf:
+        - $ref: '#/components/schemas/Attachment'
+        - type: object
+          required:
+            - downloadUrl
+          properties:
+            downloadUrl:
+              type: string
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+  requestBodies:
+    CreateFolderRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+              parentFolderId:
+                type: string
+
+    UpdateFolderRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            description: At least one field (name or parentFolderId) must be provided. OpenAPI cannot enforce this constraint.
+            properties:
+              name:
+                type: string
+              parentFolderId:
+                type: string
+
+    CreateNoteRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - title
+              - folderId
+            properties:
+              title:
+                type: string
+              folderId:
+                type: string
+              content:
+                type: string
+                default: ''
+
+    UpdateNoteRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+              folderId:
+                type: string
+
+    CreateAttachmentRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - filename
+              - mimeType
+              - size
+            properties:
+              filename:
+                type: string
+              mimeType:
+                type: string
+              size:
+                type: integer
+
+paths:
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      summary: Get current authenticated user
+      responses:
+        '200':
+          description: Authenticated user details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - userId
+                  - email
+                  - username
+                properties:
+                  userId:
+                    type: string
+                  email:
+                    type: string
+                  username:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /folders:
+    get:
+      operationId: listFolders
+      summary: List all folders for the authenticated user
+      responses:
+        '200':
+          description: List of folders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Folder'
+
+    post:
+      operationId: createFolder
+      summary: Create a new folder
+      requestBody:
+        $ref: '#/components/requestBodies/CreateFolderRequest'
+      responses:
+        '201':
+          description: Created folder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Parent folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /folders/{folderId}:
+    parameters:
+      - name: folderId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    put:
+      operationId: updateFolder
+      summary: Update a folder
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateFolderRequest'
+      responses:
+        '200':
+          description: Updated folder
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Folder'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteFolder
+      summary: Delete a folder
+      responses:
+        '204':
+          description: Folder deleted
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notes:
+    get:
+      operationId: listNotes
+      summary: List notes for the authenticated user
+      parameters:
+        - name: folderId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Note'
+
+    post:
+      operationId: createNote
+      summary: Create a new note
+      requestBody:
+        $ref: '#/components/requestBodies/CreateNoteRequest'
+      responses:
+        '201':
+          description: Created note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Folder not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notes/{noteId}:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: getNote
+      summary: Get a single note
+      responses:
+        '200':
+          description: Note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      operationId: updateNote
+      summary: Update a note
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateNoteRequest'
+      responses:
+        '200':
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteNote
+      summary: Delete a note and its attachment metadata
+      responses:
+        '204':
+          description: Note deleted
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notes/{noteId}/attachments:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      operationId: listAttachments
+      summary: List attachments for a note, each with a presigned download URL
+      responses:
+        '200':
+          description: List of attachments with presigned download URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentWithDownloadUrl'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      operationId: createAttachment
+      summary: Register an attachment and get a presigned upload URL
+      requestBody:
+        $ref: '#/components/requestBodies/CreateAttachmentRequest'
+      responses:
+        '201':
+          description: Attachment record and presigned S3 upload URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - attachment
+                  - uploadUrl
+                properties:
+                  attachment:
+                    $ref: '#/components/schemas/Attachment'
+                  uploadUrl:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notes/{noteId}/attachments/{attachmentId}:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+
+    delete:
+      operationId: deleteAttachment
+      summary: Delete an attachment record and its S3 object
+      responses:
+        '204':
+          description: Attachment deleted
+        '404':
+          description: Attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
