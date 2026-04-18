@@ -110,6 +110,7 @@ async function getAttachment(
   attachmentId: string,
 ): Promise<APIGatewayProxyResultV2> {
   const tableName = requireEnv('TABLE_NAME');
+  const bucketName = requireEnv('ATTACHMENTS_BUCKET');
 
   const attachment = await getItem<Attachment>({
     TableName: tableName,
@@ -120,7 +121,17 @@ async function getAttachment(
   if (attachment.noteId !== noteId) return notFound('Attachment not found');
 
   const { attachmentId: id, noteId: nId, filename, mimeType, size, s3Key, createdAt } = attachment;
-  return ok({ attachmentId: id, noteId: nId, filename, mimeType, size, s3Key, createdAt });
+  const downloadUrl = await getPresignedGetUrl(bucketName, s3Key);
+  return ok({
+    attachmentId: id,
+    noteId: nId,
+    filename,
+    mimeType,
+    size,
+    s3Key,
+    createdAt,
+    downloadUrl,
+  });
 }
 
 async function deleteAttachment(

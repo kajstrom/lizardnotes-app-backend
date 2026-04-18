@@ -503,6 +503,23 @@ paths:
         schema:
           type: string
 
+    get:
+      operationId: getAttachment
+      summary: Get attachment metadata and a presigned S3 download URL (60-minute expiry)
+      responses:
+        '200':
+          description: Attachment metadata with presigned download URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentWithDownloadUrl'
+        '404':
+          description: Attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     delete:
       operationId: deleteAttachment
       summary: Delete an attachment record and its S3 object

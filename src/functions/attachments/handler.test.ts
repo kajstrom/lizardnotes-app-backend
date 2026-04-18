@@ -231,7 +231,7 @@ describe('createAttachment', () => {
 });
 
 describe('getAttachment', () => {
-  it('returns 200 with attachment metadata (no presigned URL)', async () => {
+  it('returns 200 with attachment metadata and presigned downloadUrl', async () => {
     ddbMock.on(GetCommand).resolves({ Item: sampleAttachment });
 
     const result = asStructured(await handler(makeEvent('GET', 'note-1', 'attach-1')));
@@ -245,8 +245,8 @@ describe('getAttachment', () => {
     expect(body['size']).toBe(1024);
     expect(body['s3Key']).toBe(sampleAttachment.s3Key);
     expect(body['createdAt']).toBe(sampleAttachment.createdAt);
-    expect(body['downloadUrl']).toBeUndefined();
-    expect(mockGetPresignedGetUrl).not.toHaveBeenCalled();
+    expect(body['downloadUrl']).toBe('https://mock-get-url');
+    expect(mockGetPresignedGetUrl).toHaveBeenCalledWith('test-bucket', sampleAttachment.s3Key);
   });
 
   it('returns 404 when attachment record does not exist', async () => {
