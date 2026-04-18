@@ -84,7 +84,7 @@ describe('createFolder', () => {
     const body = parseBody(result) as Record<string, unknown>;
     expect(body['name']).toBe('Work');
     expect(body['path']).toBe('/Work');
-    expect(body['parentFolderId']).toBeNull();
+    expect(body['parentFolderId']).toBeUndefined();
     expect(body['userId']).toBe('user-123');
     expect(typeof body['folderId']).toBe('string');
     expect(ddbMock).toHaveReceivedCommandTimes(PutCommand, 1);
