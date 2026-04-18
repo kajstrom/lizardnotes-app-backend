@@ -73,7 +73,7 @@ async function createFolder(
     userId,
     folderId,
     name,
-    parentFolderId,
+    ...(parentFolderId != null ? { parentFolderId } : {}),
     path,
     createdAt: now,
     updatedAt: now,
@@ -124,7 +124,7 @@ async function updateFolder(
   const now = new Date().toISOString();
   const fields: Record<string, unknown> = { updatedAt: now, path: newPath };
   if (hasName) fields['name'] = newName;
-  if (hasParentFolderId) fields['parentFolderId'] = newParentFolderId;
+  if (hasParentFolderId && newParentFolderId != null) fields['parentFolderId'] = newParentFolderId;
 
   const fieldKeys = Object.keys(fields);
   const expressionParts = fieldKeys.map((_, i) => `#f${i} = :v${i}`);
@@ -135,10 +135,14 @@ async function updateFolder(
     expressionAttributeValues[`:v${i}`] = fields[k];
   });
 
+  const removeParentFolderId = hasParentFolderId && newParentFolderId == null;
+  if (removeParentFolderId) expressionAttributeNames['#pfi'] = 'parentFolderId';
+
   await updateItem({
     TableName: tableName,
     Key: key,
-    UpdateExpression: `SET ${expressionParts.join(', ')}`,
+    UpdateExpression:
+      `SET ${expressionParts.join(', ')}` + (removeParentFolderId ? ' REMOVE #pfi' : ''),
     ExpressionAttributeNames: expressionAttributeNames,
     ExpressionAttributeValues: expressionAttributeValues,
   });
