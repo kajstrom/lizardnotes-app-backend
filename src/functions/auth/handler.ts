@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { badRequest, ok } from '../../lib/response.js';
+import { badRequest, internalError, ok } from '../../lib/response.js';
 
 type JwtClaims = Record<string, string | number | boolean | string[] | undefined>;
 
@@ -13,19 +13,24 @@ function isNonEmptyString(v: unknown): v is string {
 }
 
 export const handler = (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
-  const claims = extractClaims(event);
+  try {
+    const claims = extractClaims(event);
 
-  if (!claims) {
-    return Promise.resolve(badRequest('Missing auth claims'));
+    if (!claims) {
+      return Promise.resolve(badRequest('Missing auth claims'));
+    }
+
+    const userId = claims['sub'];
+    const email = claims['email'];
+    const username = claims['cognito:username'];
+
+    if (!isNonEmptyString(userId) || !isNonEmptyString(email) || !isNonEmptyString(username)) {
+      return Promise.resolve(badRequest('Missing auth claims'));
+    }
+
+    return Promise.resolve(ok({ userId, email, username }));
+  } catch (err) {
+    console.error('Unhandled error:', err);
+    return Promise.resolve(internalError());
   }
-
-  const userId = claims['sub'];
-  const email = claims['email'];
-  const username = claims['cognito:username'];
-
-  if (!isNonEmptyString(userId) || !isNonEmptyString(email) || !isNonEmptyString(username)) {
-    return Promise.resolve(badRequest('Missing auth claims'));
-  }
-
-  return Promise.resolve(ok({ userId, email, username }));
 };

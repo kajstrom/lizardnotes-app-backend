@@ -153,16 +153,21 @@ async function deleteFolder(userId: string, folderId: string): Promise<APIGatewa
 }
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
-  const userId = extractUserId(event);
-  if (!userId) return badRequest('Unauthorized');
+  try {
+    const userId = extractUserId(event);
+    if (!userId) return badRequest('Unauthorized');
 
-  const method = event.requestContext.http.method;
-  const folderId = event.pathParameters?.['folderId'];
+    const method = event.requestContext.http.method;
+    const folderId = event.pathParameters?.['folderId'];
 
-  if (method === 'GET' && !folderId) return listFolders(userId);
-  if (method === 'POST' && !folderId) return createFolder(userId, event);
-  if (method === 'PUT' && folderId) return updateFolder(userId, folderId, event);
-  if (method === 'DELETE' && folderId) return deleteFolder(userId, folderId);
+    if (method === 'GET' && !folderId) return await listFolders(userId);
+    if (method === 'POST' && !folderId) return await createFolder(userId, event);
+    if (method === 'PUT' && folderId) return await updateFolder(userId, folderId, event);
+    if (method === 'DELETE' && folderId) return await deleteFolder(userId, folderId);
 
-  return internalError('Unknown route');
+    return internalError('Unknown route');
+  } catch (err) {
+    console.error('Unhandled error:', err);
+    return internalError();
+  }
 };

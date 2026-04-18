@@ -251,6 +251,18 @@ describe('updateNote', () => {
   });
 });
 
+describe('unhandled errors', () => {
+  it('returns 500 when DynamoDB throws unexpectedly', async () => {
+    ddbMock.on(GetCommand).rejects(new Error('DynamoDB unavailable'));
+
+    const result = asStructured(
+      await handler(makeEvent('POST', undefined, { title: 'Test', folderId: 'folder-1' })),
+    );
+
+    expect(result.statusCode).toBe(500);
+  });
+});
+
 describe('deleteNote', () => {
   it('returns 204 and deletes note and its attachment records', async () => {
     ddbMock.on(GetCommand).resolves({ Item: sampleNote });

@@ -175,17 +175,22 @@ async function deleteNote(userId: string, noteId: string): Promise<APIGatewayPro
 }
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
-  const userId = extractUserId(event);
-  if (!userId) return badRequest('Unauthorized');
+  try {
+    const userId = extractUserId(event);
+    if (!userId) return badRequest('Unauthorized');
 
-  const method = event.requestContext.http.method;
-  const noteId = event.pathParameters?.['noteId'];
+    const method = event.requestContext.http.method;
+    const noteId = event.pathParameters?.['noteId'];
 
-  if (method === 'GET' && !noteId) return listNotes(userId, event);
-  if (method === 'POST' && !noteId) return createNote(userId, event);
-  if (method === 'GET' && noteId) return getNote(userId, noteId);
-  if (method === 'PUT' && noteId) return updateNote(userId, noteId, event);
-  if (method === 'DELETE' && noteId) return deleteNote(userId, noteId);
+    if (method === 'GET' && !noteId) return await listNotes(userId, event);
+    if (method === 'POST' && !noteId) return await createNote(userId, event);
+    if (method === 'GET' && noteId) return await getNote(userId, noteId);
+    if (method === 'PUT' && noteId) return await updateNote(userId, noteId, event);
+    if (method === 'DELETE' && noteId) return await deleteNote(userId, noteId);
 
-  return internalError('Unknown route');
+    return internalError('Unknown route');
+  } catch (err) {
+    console.error('Unhandled error:', err);
+    return internalError();
+  }
 };

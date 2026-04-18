@@ -129,17 +129,23 @@ async function deleteAttachment(
 }
 
 export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
-  const userId = extractUserId(event);
-  if (!userId) return badRequest('Unauthorized');
+  try {
+    const userId = extractUserId(event);
+    if (!userId) return badRequest('Unauthorized');
 
-  const method = event.requestContext.http.method;
-  const noteId = event.pathParameters?.['noteId'];
-  const attachmentId = event.pathParameters?.['attachmentId'];
+    const method = event.requestContext.http.method;
+    const noteId = event.pathParameters?.['noteId'];
+    const attachmentId = event.pathParameters?.['attachmentId'];
 
-  if (method === 'GET' && noteId && !attachmentId) return listAttachments(userId, noteId);
-  if (method === 'POST' && noteId && !attachmentId) return createAttachment(userId, noteId, event);
-  if (method === 'DELETE' && noteId && attachmentId)
-    return deleteAttachment(userId, noteId, attachmentId);
+    if (method === 'GET' && noteId && !attachmentId) return await listAttachments(userId, noteId);
+    if (method === 'POST' && noteId && !attachmentId)
+      return await createAttachment(userId, noteId, event);
+    if (method === 'DELETE' && noteId && attachmentId)
+      return await deleteAttachment(userId, noteId, attachmentId);
 
-  return internalError('Unknown route');
+    return internalError('Unknown route');
+  } catch (err) {
+    console.error('Unhandled error:', err);
+    return internalError();
+  }
 };

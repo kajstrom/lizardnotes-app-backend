@@ -161,6 +161,16 @@ describe('updateFolder', () => {
   });
 });
 
+describe('unhandled errors', () => {
+  it('returns 500 when DynamoDB throws unexpectedly', async () => {
+    ddbMock.on(PutCommand).rejects(new Error('DynamoDB unavailable'));
+
+    const result = asStructured(await handler(makeEvent('POST', undefined, { name: 'Work' })));
+
+    expect(result.statusCode).toBe(500);
+  });
+});
+
 describe('deleteFolder', () => {
   it('returns 204 when folder is deleted', async () => {
     ddbMock.on(DeleteCommand).resolves({});

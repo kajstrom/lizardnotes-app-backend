@@ -230,6 +230,16 @@ describe('createAttachment', () => {
   });
 });
 
+describe('unhandled errors', () => {
+  it('returns 500 when DynamoDB throws unexpectedly', async () => {
+    ddbMock.on(GetCommand).rejects(new Error('DynamoDB unavailable'));
+
+    const result = asStructured(await handler(makeEvent('GET', 'note-1')));
+
+    expect(result.statusCode).toBe(500);
+  });
+});
+
 describe('deleteAttachment', () => {
   it('returns 204, deletes S3 object and DynamoDB record', async () => {
     ddbMock.on(GetCommand).resolves({ Item: sampleAttachment });
