@@ -104,6 +104,25 @@ async function createAttachment(
   return created({ attachment, uploadUrl });
 }
 
+async function getAttachment(
+  userId: string,
+  noteId: string,
+  attachmentId: string,
+): Promise<APIGatewayProxyResultV2> {
+  const tableName = requireEnv('TABLE_NAME');
+
+  const attachment = await getItem<Attachment>({
+    TableName: tableName,
+    Key: attachmentKey(userId, attachmentId),
+  });
+
+  if (!attachment) return notFound('Attachment not found');
+  if (attachment.noteId !== noteId) return notFound('Attachment not found');
+
+  const { attachmentId: id, noteId: nId, filename, mimeType, size, s3Key, createdAt } = attachment;
+  return ok({ attachmentId: id, noteId: nId, filename, mimeType, size, s3Key, createdAt });
+}
+
 async function deleteAttachment(
   userId: string,
   noteId: string,
@@ -138,6 +157,8 @@ export const handler = async (event: APIGatewayProxyEventV2): Promise<APIGateway
     const attachmentId = event.pathParameters?.['attachmentId'];
 
     if (method === 'GET' && noteId && !attachmentId) return await listAttachments(userId, noteId);
+    if (method === 'GET' && noteId && attachmentId)
+      return await getAttachment(userId, noteId, attachmentId);
     if (method === 'POST' && noteId && !attachmentId)
       return await createAttachment(userId, noteId, event);
     if (method === 'DELETE' && noteId && attachmentId)

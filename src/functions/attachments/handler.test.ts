@@ -230,6 +230,46 @@ describe('createAttachment', () => {
   });
 });
 
+describe('getAttachment', () => {
+  it('returns 200 with attachment metadata (no presigned URL)', async () => {
+    ddbMock.on(GetCommand).resolves({ Item: sampleAttachment });
+
+    const result = asStructured(await handler(makeEvent('GET', 'note-1', 'attach-1')));
+
+    expect(result.statusCode).toBe(200);
+    const body = parseBody(result) as Record<string, unknown>;
+    expect(body['attachmentId']).toBe('attach-1');
+    expect(body['noteId']).toBe('note-1');
+    expect(body['filename']).toBe('file.png');
+    expect(body['mimeType']).toBe('image/png');
+    expect(body['size']).toBe(1024);
+    expect(body['s3Key']).toBe(sampleAttachment.s3Key);
+    expect(body['createdAt']).toBe(sampleAttachment.createdAt);
+    expect(body['downloadUrl']).toBeUndefined();
+    expect(mockGetPresignedGetUrl).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when attachment record does not exist', async () => {
+    ddbMock.on(GetCommand).resolves({ Item: undefined });
+
+    const result = asStructured(await handler(makeEvent('GET', 'note-1', 'attach-1')));
+
+    expect(result.statusCode).toBe(404);
+    const body = parseBody(result) as Record<string, string>;
+    expect(body['message']).toBe('Attachment not found');
+  });
+
+  it('returns 404 when attachment.noteId does not match path noteId', async () => {
+    ddbMock.on(GetCommand).resolves({ Item: { ...sampleAttachment, noteId: 'other-note' } });
+
+    const result = asStructured(await handler(makeEvent('GET', 'note-1', 'attach-1')));
+
+    expect(result.statusCode).toBe(404);
+    const body = parseBody(result) as Record<string, string>;
+    expect(body['message']).toBe('Attachment not found');
+  });
+});
+
 describe('unhandled errors', () => {
   it('returns 500 when DynamoDB throws unexpectedly', async () => {
     ddbMock.on(GetCommand).rejects(new Error('DynamoDB unavailable'));
